@@ -127,7 +127,7 @@ void BAB(const Branch& branch,
     if (min_bound == max_bound && (size - root->get_current_way_size()) == 1) {
         std::vector<std::uint32_t> way = root->get_current_way();
     }
-    else if (min_bound > max_bound) {
+    else if (min_bound >= record) {
         if (root != nullptr) {
             delete root;
             root = nullptr;
