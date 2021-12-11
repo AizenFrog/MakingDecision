@@ -91,17 +91,57 @@ void set_free_cells(std::vector<std::uint32_t> current_way, std::vector<std::uin
     free_cells = tmp;
 }
 
+std::vector<std::uint32_t> get_finded_way(cell* root,
+                                          const matrix<std::uint32_t>& distances,
+                                          const std::vector<std::uint32_t>& times) {
+    std::vector<std::uint32_t> current_way = root->current_way;
+    std::size_t size = current_way.size();
+    std::uint32_t current_sum = 0;
+    std::uint32_t res = 0;
+    for (std::size_t i = 0; i < size - 1; ++i) {
+        current_sum += distances[current_way[i]][current_way[i + 1]];
+        if (current_sum > times[current_way[i + 1] - 1])
+            ++res;
+    }
+    std::vector<std::uint32_t> free_cells;
+    for (std::size_t j = 0; size + j < distances.size(); ++j) {
+        free_cells.resize(distances.size() - current_way.size());
+        set_free_cells(current_way, free_cells);
+        std::uint32_t tmp_sum = 0;
+        std::uint32_t current_min_way = -1;
+        std::uint32_t min_delta = -1;
+        std::uint32_t min_way = -1;
+        std::size_t min_way_index = -1;
+        std::size_t index = -1;
+        for (std::size_t i = 0; i < free_cells.size(); ++i) {
+            tmp_sum = current_sum + distances[current_way[current_way.size() - 1]][free_cells[i]];
+            if (distances[current_way[current_way.size() - 1]][free_cells[i]] < min_way) {
+                min_way = distances[current_way[current_way.size() - 1]][free_cells[i]];
+                min_way_index = i;
+            }
+            if (tmp_sum <= times[free_cells[i] - 1] && times[free_cells[i] - 1] - tmp_sum < min_delta) {
+                min_delta = times[free_cells[i] - 1] - tmp_sum;
+                current_min_way = distances[current_way[current_way.size() - 1]][free_cells[i]];
+                index = i;
+            }
+        }
+        if (min_delta == -1) {
+            current_sum += min_way;
+            current_way.push_back(free_cells[min_way_index]);
+            ++res;
+        }
+        else {
+            current_sum += current_min_way;
+            current_way.push_back(free_cells[index]);
+        }
+    }
+    return current_way;
+}
+
 namespace base {
 
 class branch {
 public:
-    /*std::uint32_t operator()(std::vector<std::uint32_t>& free_cells) const {
-        std::sort(free_cells.begin(), free_cells.end());
-        if (free_cells.size() != 0)
-            return 0;
-        return -1;
-    }*/
-
     cell* operator()(cell* root) const {
         for (std::size_t i = 0; i < root->get_child_count(); ++i)
             if (root->children[i]->condition == true) {
@@ -227,29 +267,12 @@ public:
             if (current_sum > times[current_way[i + 1] - 1])
                 ++res;
         }
-        /*std::vector<std::uint32_t> free_cells;
-        free_cells.resize(distances.size() - current_way.size());
-        set_free_cells(current_way, free_cells);
-        if (free_cells.size() > 0) {
-            std::uint32_t mean = 0;
-            for (std::size_t i = 0; i < free_cells.size(); ++i)
-                mean += current_sum + distances[current_way[current_way.size() - 1]][free_cells[i]];
-            mean = (mean / free_cells.size()) * 1.1;
-            for (std::size_t i = 0; i < free_cells.size(); ++i)
-                if (mean >= times[free_cells[i] - 1])
-                    ++res;
-        }
-        return res;*/
         std::vector<std::uint32_t> free_cells;
         for (std::size_t j = 0; size + j < distances.size(); ++j) {
             free_cells.resize(distances.size() - current_way.size());
             set_free_cells(current_way, free_cells);
-            std::uint32_t tmp_sum = 0;
-            std::uint32_t current_min_way = -1;
-            std::uint32_t min_delta = -1;
             std::uint32_t min_way = -1;
             std::size_t min_way_index = -1;
-            std::size_t index = -1;
             for (std::size_t i = 0; i < free_cells.size(); ++i) {
                 if (distances[current_way[current_way.size() - 1]][free_cells[i]] < min_way) {
                     min_way = distances[current_way[current_way.size() - 1]][free_cells[i]];
@@ -289,8 +312,6 @@ public:
                 max = current_sum + distances[current_way[current_way.size() - 1]][free_cells[i]];
                 index = i;
             }
-        //int addition_sum = (times[free_cells[index] - 1] - (int)max) / 5;
-        //max += addition_sum;
         max *= 0.93;
         for (std::size_t i = 0; i < free_cells.size(); ++i)
             if (max >= times[free_cells[i] - 1])
@@ -354,53 +375,6 @@ void bad_solutions(cell* root,
     real_cells += free_cells.size();
 }
 
-std::vector<std::uint32_t> get_finded_way(cell* root,
-                                          const matrix<std::uint32_t>& distances,
-                                          const std::vector<std::uint32_t>& times) {
-    std::vector<std::uint32_t> current_way = root->current_way;
-    std::size_t size = current_way.size();
-    std::uint32_t current_sum = 0;
-    std::uint32_t res = 0;
-    for (std::size_t i = 0; i < size - 1; ++i) {
-        current_sum += distances[current_way[i]][current_way[i + 1]];
-        if (current_sum > times[current_way[i + 1] - 1])
-            ++res;
-    }
-    std::vector<std::uint32_t> free_cells;
-    for (std::size_t j = 0; size + j < distances.size(); ++j) {
-        free_cells.resize(distances.size() - current_way.size());
-        set_free_cells(current_way, free_cells);
-        std::uint32_t tmp_sum = 0;
-        std::uint32_t current_min_way = -1;
-        std::uint32_t min_delta = -1;
-        std::uint32_t min_way = -1;
-        std::size_t min_way_index = -1;
-        std::size_t index = -1;
-        for (std::size_t i = 0; i < free_cells.size(); ++i) {
-            tmp_sum = current_sum + distances[current_way[current_way.size() - 1]][free_cells[i]];
-            if (distances[current_way[current_way.size() - 1]][free_cells[i]] < min_way) {
-                min_way = distances[current_way[current_way.size() - 1]][free_cells[i]];
-                min_way_index = i;
-            }
-            if (tmp_sum <= times[free_cells[i] - 1] && times[free_cells[i] - 1] - tmp_sum < min_delta) {
-                min_delta = times[free_cells[i] - 1] - tmp_sum;
-                current_min_way = distances[current_way[current_way.size() - 1]][free_cells[i]];
-                index = i;
-            }
-        }
-        if (min_delta == -1) {
-            current_sum += min_way;
-            current_way.push_back(free_cells[min_way_index]);
-            ++res;
-        }
-        else {
-            current_sum += current_min_way;
-            current_way.push_back(free_cells[index]);
-        }
-    }
-    return current_way;
-}
-
 template <typename Branch, typename Bottom, typename Top>
 std::vector<std::uint32_t> BAB(const Branch& branch,
                                const Bottom& bottom,
@@ -421,7 +395,6 @@ std::vector<std::uint32_t> BAB(const Branch& branch,
     ++tree_cells_count;
     std::vector<std::uint32_t> current_way(root->current_way);
     std::vector<std::uint32_t> free_cells(size - current_way.size());
-    /*set_free_cells(current_way, free_cells);*/
     bad_solutions(root, bottom, top, free_cells, distances, times, tree_cells_count);
     root->set_free_cells(free_cells);
     while (true) {
@@ -431,28 +404,14 @@ std::vector<std::uint32_t> BAB(const Branch& branch,
             free_cells = current_root->free_cells;
         }
         else {
-            current_root = min_cells.top();//current_min_cell;
-            //min_cells.pop();
+            current_root = min_cells.top();
             current_way = current_root->current_way;
             free_cells = current_root->free_cells;
-            //parents.push(current_min_cell);
-            std::cout << "YES" << std::endl;
             if (root->get_child_count() == root->free_cells.size()) {
-                std::cout << "current min - " << current_root->get_bottom() << std::endl;
-                print_way(current_way);
                 not_last_flag = false;
                 return get_finded_way(current_root, distances, times);
             }
         }
-
-        /*if (root->get_child_count() == root->get_free_cells_count() && not_last_flag == true) {
-            current_root = current_min_cell;
-            current_way = current_root->get_current_way();
-            free_cells = current_root->get_free_cells();
-            parents.push(current_min_cell);
-            std::cout << "YES" << std::endl;
-            not_last_flag = false;
-        }*/
 
         if (current_root->get_bottom() == -1) {
             current_root->set_bottom(bottom(current_root, distances, times));
@@ -460,19 +419,12 @@ std::vector<std::uint32_t> BAB(const Branch& branch,
         }
         std::uint32_t max = current_root->get_top();
         std::uint32_t min = current_root->get_bottom();
-        /*if (not_last_flag == false) {
-            std::cout << "top    - " << max << std::endl;
-            std::cout << "bottom - " << min << std::endl;
-            print_way(current_way);
-        }*/
+
         if (min > min_max && not_last_flag == false && current_root != root) {
-            //std::cout << "---------------" << std::endl;
             parents.pop();
-            //min_cells.pop();
             continue;
         }
         if (min >= min_max && not_last_flag == true && current_root != root) {
-            //std::cout << "skip some steps - " << current_root->get_bottom() << std::endl;
             parents.pop();
             continue;
         }
@@ -487,8 +439,6 @@ std::vector<std::uint32_t> BAB(const Branch& branch,
                 }
                 min_cells.push(current_root);
                 min_max = max;
-                //get_finded_way(current_min_cell, distances, times);
-                //std::cout << "minmax - " << min_max << std::endl;
             }
             parents.pop();
             continue;
@@ -502,7 +452,6 @@ std::vector<std::uint32_t> BAB(const Branch& branch,
             std::uint32_t t = top(last_item, distances, times);
             std::uint32_t b = bottom(last_item, distances, times);
             if (b == t && not_last_flag == false) {
-                std::cout << "res bottom - " << b << ", res top - " << t << std::endl;
                 return last_item->current_way;
             }
             else
@@ -510,31 +459,6 @@ std::vector<std::uint32_t> BAB(const Branch& branch,
         }
 
         // branch
-        /*std::vector<std::uint32_t> tmp;
-        for (std::size_t i = 0; i < current_root->get_child_count(); ++i) {
-            tmp.push_back(current_root->get_child(i)->get_last_in_current_way());
-        }
-        std::vector<std::uint32_t> tmp1 = free_cells;
-        for (std::size_t i = 0; i < tmp.size(); ++i) {
-            for (std::size_t j = 0; j < tmp1.size(); ++j) {
-                if (tmp1[j] == tmp[i]) {
-                    tmp1.erase(tmp1.begin() + j);
-                    break;
-                }
-            }
-        }
-        std::uint32_t next_elem_index = branch(tmp1);
-        if (next_elem_index == -1) {
-            if (not_last_flag == false)
-                std::cout << "================" << std::endl;
-            parents.pop();
-            continue;
-        }
-        current_way.push_back(tmp1[next_elem_index]);
-        cell* new_item = new cell(current_way);
-        current_root->set_child(new_item);
-        parents.push(new_item);
-        tree_cells_count++;*/
         cell* new_item = branch(current_root);
         if (new_item == nullptr) {
             parents.pop();
@@ -599,6 +523,7 @@ int main(int argc, char** argv)
     std::vector<matrix<std::uint32_t>> distansies(files.size());
     std::vector<std::vector<std::uint32_t>> times(files.size());
     std::vector<std::vector<std::uint32_t>> results(files.size() * 2);
+    std::vector<double> ratio(files.size() * 2);
     for (std::size_t i = 0; i < files.size(); ++i)
         open_file(files[i], times[i], distansies[i]);
 
@@ -648,21 +573,25 @@ int main(int argc, char** argv)
         std::pair<std::uint32_t, std::uint32_t> res_c = check_way(results[files.size() + i], distansies[i], times[i]);
         std::size_t s_count = factorial(times[i].size());
         std::cout << "Solutions count - " << s_count << std::endl;
-        std::cout << "My way base:" << std::endl;
-        std::cout << "way length - " << res_b.first << " , violation count - " << res_b.second << std::endl;
+        std::cout << "Base:" << std::endl;
         std::cout << "Real cell count - " << real_cell_count_b << std::endl;
-        std::cout << "Efficiency ratio - " << efficiency_ratio(s_count, real_cell_count_b) << std::endl;
-        print_way(results[i]);
-        std::cout << "My way custom:" << std::endl;
-        std::cout << "way length - " << res_c.first << " , violation count - " << res_c.second << std::endl;
+        std::cout << "Efficiency ratio - " << (ratio[i] = efficiency_ratio(s_count, real_cell_count_b)) << std::endl;
+        std::cout << "Custom:" << std::endl;
         std::cout << "Real cell count - " << real_cell_count_c << std::endl;
-        std::cout << "Efficiency ratio - " << efficiency_ratio(s_count, real_cell_count_c) << std::endl;
-        print_way(results[files.size() + i]);
+        std::cout << "Efficiency ratio - " << (ratio[files.size() + i] = efficiency_ratio(s_count, real_cell_count_c)) << std::endl;
         std::pair<std::uint32_t, std::uint32_t> res = check_way(right_way[i], distansies[i], times[i]);
-        std::cout << "Right way:" << std::endl;
-        std::cout << "way length - " << res.first << " , violation count - " << res.second << std::endl;
         std::cout << "-------------------------------------------------------" << std::endl;
     }
+
+    double mean_b = 0.0, mean_c = 0.0;
+    for (std::size_t i = 0; i < files.size(); ++i) {
+        mean_b += ratio[i];
+        mean_c += ratio[files.size() + i];
+    }
+    mean_b /= files.size();
+    mean_c /= files.size();
+    std::cout << "Mean base - " << mean_b << std::endl;
+    std::cout << "Mean custom - " << mean_c << std::endl;
 
     return 0;
 }
