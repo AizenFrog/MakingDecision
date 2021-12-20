@@ -298,11 +298,32 @@ int main(int argc, char** argv)
     for (std::size_t i = 0; i < files.size(); ++i)
         open_file(files[i], points[i]);
 
+    constexpr std::uint8_t base_m   = 8;
+    constexpr std::uint8_t base_p   = 3;
+    constexpr std::uint8_t custom_m = 10;
+    constexpr std::uint8_t custom_p = 2;
+
     for (std::size_t i = 0; i < files.size(); ++i) {
-        cluster<8>* root = new cluster<8>(points[i].size(), 0);
-        root->point = points[i];
-        salesman<8, 3>(root, points[i]);
-        delete root;
+        cluster<base_m>* root_b   = new cluster<base_m>(points[i].size(), 0);
+        cluster<custom_m>* root_c = new cluster<custom_m>(points[i].size(), 0);
+        root_b->point = points[i];
+        root_c->point = points[i];
+
+        salesman<base_m, base_p>(root_b, points[i]);
+        salesman<custom_m, custom_p>(root_c, points[i]);
+        double base   = 0.0;
+        double custom = 0.0;
+        for (std::size_t j = 0; j < root_b->way.size() - 1; ++j) {
+            base += root_b->distance[root_b->way[i]][root_b->way[i + 1]];
+            custom += root_c->distance[root_c->way[i]][root_c->way[i + 1]];
+        }
+        double efficiency = (custom - base) / custom;
+        std::cout << files[i] << ": base - " << base << std::endl;
+        std::cout << files[i] << ": custom - " << custom << std::endl;
+        std::cout << "Efficiency - " << efficiency << std::endl;
+        std::cout << "---------------------------------------------------------------" << std::endl;
+        delete root_b;
+        delete root_c;
     }
 
     return 0;
